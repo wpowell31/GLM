@@ -1,0 +1,59 @@
+---
+title: "719 HW 9"
+author: "Will Powell"
+date: '2023-11-16'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. (10 points) Suppose that y|θ∼Gamma(1, θ) (i.e., exponential distribution with mean θ) and
+that θ∼InverseGamma(α, β). Find the posterior distribution of θ. Is the inverse gamma a
+conjugate prior?
+
+$$p(\theta | y) \propto p(y | \theta) p(\theta)$$
+$$\propto \theta e^{-y / \theta} \frac{\beta^{\alpha}}{\Gamma(\alpha)}\theta^{-\alpha-1}exp(-\beta/\theta)$$
+
+$$\propto \frac{\beta^{\alpha}}{\Gamma(\alpha)}\theta^{-\alpha}exp(-(y +\beta)/\theta)$$
+
+Thus $\theta | y \sim InverseGamma(\alpha + 1, \beta + y)$
+
+
+2. (10 points) Suppose that we have a Normally distributed likelihood $y|\mu_l \sim N(\mu_l, \sigma_l^2)$ and have a prior $y|\mu_l \sim N(\mu_0, \sigma_0^2)$ We observe $y = 0.580$ and set $\mu0 = 0, \sigma_0^2 = 0.1907$ , and $\sigma_l^2 = 0.2266$.
+Apply the Metropolis algorithm to generate samples from the posterior distribution of µl.
+Use $Q \sim N(0, 1)$. Show a trace plot of the samples. Calculate posterior mean and variance of $\mu_l$ using the samples. Provide your R code.
+(Hint: Modify the f.metropolis.x function from lecture)
+
+```{r}
+f.metropolis.x <- function(niter, x0) {
+  tmp.x <- rep(NA, niter)
+  tmp.x[1] <- x0 # choose a starting point
+  
+  for(ii in 2:niter) {
+    tmp.x[ii] <- tmp.x[ii-1] + rnorm(1) # propose new value
+    tmp.dist.x <- (1 / sqrt(.1907) ) * exp( (-1 / (2*.1907) )*(tmp.x[ii-1]-0)^2) 
+    tmp.dist.x.proposed <- (1 / sqrt(.2266) ) * exp( (-1 / (2*.2266) )*(tmp.x[ii]-0)^2) 
+    tmp.alpha <- min(tmp.dist.x.proposed/tmp.dist.x, 1)
+    tmp.U <- runif(1)
+    tmp.x[ii] <- ifelse( tmp.U < tmp.alpha, tmp.x[ii], tmp.x[ii-1] )
+  }
+  return(tmp.x)
+}
+set.seed(10)
+x.sam <- f.metropolis.x(niter=50000, x0=.580)
+plot(x.sam, type="l")
+```
+
+```{r}
+post.mean <- mean(x.sam[10001:50000])
+post.var <- var(x.sam[10001:50000])
+c(post.mean, post.var)
+```
+
+
+Above we can see the calculated posterior mean and variance of $\mu_l$.
+

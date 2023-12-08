@@ -1,0 +1,234 @@
+---
+title: "719 HW 6"
+author: "Will Powell"
+date: '2023-10-11'
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+1a.) There are 6 different possible groups, so the saturated logistic regression model will have 6 parameters
+
+1b.) 
+
+Model 1:
+
+$$ logit(\pi_i) = \beta_1 + \beta_2*treatment$$
+
+
+Model 2:
+
+$$ logit(\pi_i) = \beta_1 + \beta_2*disease$$
+
+
+Model 3:
+
+$$ logit(\pi_i) = \beta_1 + \beta_2*treatment + \beta_3*disease + \beta_4*treatment*disease$$
+
+1d.)
+
+Code and output of model fitting
+
+```{r}
+data <- data.frame(treatment = c(0, 0, 0, 1, 1, 1),
+                   disease_severity = c(0, 1, 2, 0, 1, 2),
+                   y = c(51, 67, 42, 143, 97, 40),
+                   n = c(200, 158, 89, 315, 263, 75)
+                   )
+
+model1 <- glm( cbind(y,n-y) ~ treatment, data=data, family = 'binomial')
+model2 <- glm( cbind(y,n-y) ~ disease_severity, data=data, family = 'binomial')
+model3 <- glm( cbind(y,n-y) ~ treatment + disease_severity + treatment*disease_severity, data=data, family = 'binomial')
+summary(model1)
+summary(model2)
+summary(model3)
+```
+
+
+1e.)
+
+DF of the null deviance: 5
+DF of the residual deviance for Model 1: 4
+DF of the residual deviance for Model 2: 4
+DF of the residual deviance for Model 3: 2
+
+
+1f.)
+
+```{r}
+L <- cbind(c(0,1))
+Lb <- t(L)%*%model1$coef
+varLb <- t(L)%*%summary(model1)$cov.unscaled%*%L
+ # 95% CI for true Lb (log odds ratio)
+CILb <- Lb + c(-1,1)*qnorm(1-0.05/2)*sqrt(varLb)
+CILb
+
+# estimate for true exp(Lb) (odds ratio)
+exp(Lb)
+
+# 95% CI for true exp(Lb) (odds ratio)
+exp(CILb)
+```
+
+We can see that the 95% confidence interval does not include 1 so the treatment is having a significant effect. We are 95% confident that the true odds ratio is greater than 1, therefore there is an association between treatment and hospitalization.
+
+1g.)
+
+For question 2, we will look at the 95% confidence interval for the odds ratio from the exponentiated coefficients from the logistic regression model. 
+
+```{r}
+L <- cbind(c(0,1))
+Lb <- t(L)%*%model2$coef
+varLb <- t(L)%*%summary(model2)$cov.unscaled%*%L
+ # 95% CI for true Lb (log odds ratio)
+CILb <- Lb + c(-1,1)*qnorm(1-0.05/2)*sqrt(varLb)
+CILb
+
+# estimate for true exp(Lb) (odds ratio)
+exp(Lb)
+
+# 95% CI for true exp(Lb) (odds ratio)
+exp(CILb)
+```
+
+We can see that the odds ratio does not include 0, so we can conclude that the relationship between disease progression and hospitalization is significant. Also, if we look at the output from the fitted logistic regression model above, we can see that the disease progression coefficient has a p-value of 0.0151, meaning that we again can conclude that the disease progression is significant.
+
+1h.)
+
+```{r}
+L <- cbind(c(0,-1,-1,-2))
+Lb <- t(L)%*%model3$coef
+varLb <- t(L)%*%summary(model3)$cov.unscaled%*%L
+ # 95% CI for true Lb (log odds ratio)
+CILb <- Lb + c(-1,1)*qnorm(1-0.05/2)*sqrt(varLb)
+CILb
+
+# estimate for true exp(Lb) (odds ratio)
+exp(Lb)
+
+# 95% CI for true exp(Lb) (odds ratio)
+exp(CILb)
+```
+
+Making use of the contrast matrix, we can see that the point estimate for the odds ratio is 0.8279545 and the 95% confidence interval is (0.5536296, 1.2382083)
+
+1i.)
+Yes we can, we conclude that since the interaction is significant that the treatment effect is an effect moderator (low p-value)
+
+1j.)
+
+Model 1 vs 2: No
+
+Model 1 vs model 3: yes
+
+Model 2 vs model 3: yes
+
+
+
+1k.)
+
+```{r}
+# Model 1 vs Model 3
+## LRT
+LRT <- model1$deviance - model3$deviance
+#p-value
+1-pchisq(LRT, df=2)
+
+# Model 2 vs Model 3
+## LRT
+LRT <- model2$deviance - model3$deviance
+#p-value
+1-pchisq(LRT, df=2)
+
+```
+
+We can see that the LRT is significant for both models. reject the null, more complicated model 3 better fit in both of them
+
+
+
+
+2a.)
+```{r}
+d1 <- read.csv("table7.5.csv")
+d1[,"newstor"] <- d1[,"storage"]-1
+d1[,"force"] <- log(d1[,"centrifuge"])
+
+fit1a <- glm( cbind(y,n-y) ~ newstor, data=d1,family=binomial(link="logit"))
+summary(fit1a)
+fit2a <-glm( cbind(y, n-y) ~ newstor + force + newstor*force, data=d1,family=binomial(link="logit"))
+summary(fit2a)
+```
+
+2b.)
+```{r}
+
+y <- c(rep(1, 55), rep(0, 102-55),
+       rep(1, 52), rep(0, 99-52),
+       rep(1, 57), rep(0, 108-57),
+       rep(1, 55), rep(0, 76-55),
+       rep(1, 50), rep(0, 81-50),
+       rep(1, 50), rep(0, 90-50)
+       )
+
+
+newstor <- c(rep(0, 102+99+108), rep(1, 76+81+90))
+force <- c(rep(3.688879, 102),
+           rep(3.688879, 99),
+           rep(5.857933, 108),
+           rep(3.688879, 76),
+           rep(5.010635, 81),
+           rep(5.857933, 90)
+             
+        )
+
+length(newstor)
+
+d2 <- data.frame(y, newstor, force)
+
+fit1b <- glm( y ~ newstor, data=d2,family=binomial(link="logit"))
+summary(fit1b)
+fit2b <-glm( y ~ newstor + force + newstor*force, data=d2,family=binomial(link="logit"))
+summary(fit2b)
+```
+
+
+
+2c.)
+```{r}
+library(lmtest)
+# Grouped models LRT
+## LRT
+LRT <- fit1a$deviance - fit2a$deviance
+#p-value
+1-pchisq(LRT, df=2)
+
+lrtest(fit1a, fit2a)
+```
+
+```{r}
+library(lmtest)
+# Grouped models LRT
+## LRT
+LRT <- fit1b$deviance - fit2b$deviance
+#p-value
+1-pchisq(LRT, df=2)
+
+lrtest(fit1b, fit2b)
+```
+
+Both likelihood ratio tests give the same conclusion, with a p-value > 0.05, so we fail to reject the null in both cases
+
+2d.)
+
+$$H_0: logit(P) = \beta_0 + \beta_1newstor$$
+$$H_A: logit(P) = \beta_0 + \beta_1newstor + \beta_2force + \beta_3newstor*force$$
+
+Results: p-value = 0.07734537
+
+Conclusion: Fail to reject $H_0$. We do not evidence that the model with more terms is better. 
+

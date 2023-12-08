@@ -1,0 +1,440 @@
+---
+title: "719 HW 7"
+author: "Will Powell"
+date: '2023-10-22'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+1. (20 points) Use the data in Table 8.5 (Exercise 8.2). Create your own R or SAS dataset
+directly from Table 8.5 or use “table8 5.csv” provided in Sakai. Provide your code and
+output.
+
+(a) Use nominal logistic regression to model association between level of satisfaction and the
+other two variables. Fit several models, compare their goodness-of-fit, and then obtain a
+parsimonious model that summarizes the patterns in the data well. (Hint: Should we include
+both variables or either one in the model?) Interpret model parameters of your best model.
+
+$\pi_1:$ The probability of low satisfaction
+$\pi_2:$ The probability of medium satisfaction
+$\pi_3:$ The probability of high satisfaction
+$\pi_1 + \pi_2 + \pi_3 = 1$
+Model 1:
+$$log(\frac{\pi_2}{\pi_1}) = \beta_{02} + \beta_{12}contact$$ 
+$$log(\frac{\pi_3}{\pi_1}) = \beta_{03} + \beta_{13}contact$$
+
+```{r}
+library(VGAM)
+
+sat_low <- c(65, 34, 130, 141, 67, 130)
+sat_med <- c(54, 47, 76, 116, 48, 105)
+sat_high <- c(100, 100, 111, 191, 62, 104)
+building <- factor(c("Tower", "Tower", "Apartment", "Apartment", "House", "House"))
+building_cat <- factor(c(1, 1, 2, 2, 3, 3))
+contact <- factor(c("Low", "High", "Low", "High", "Low", "High"))
+d1 <- data.frame(building, building_cat, contact, sat_low, sat_med, sat_high)
+
+#### Nominal logistic regression
+## Reference: sat_low (Low Satisfaction)
+nominal.fit1 <- vglm(cbind(sat_med, sat_high, sat_low) ~ contact, family=multinomial, data=d1)
+summary(nominal.fit1)
+AIC(nominal.fit1)
+```
+
+
+Model 2:
+$$log(\frac{\pi_2}{\pi_1}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE)$$ 
+
+$$log(\frac{\pi_3}{\pi_1}) = \beta_{03} + \beta_{13}I(building=Apartment) + \beta_{23}I(building=HOUSE)$$ 
+
+```{r}
+#### Nominal logistic regression
+## Reference: sat_low (Low Satisfaction)
+nominal.fit2 <- vglm(cbind(sat_med, sat_high, sat_low) ~ as.factor(building_cat), family=multinomial, data=d1)
+summary(nominal.fit2)
+AIC(nominal.fit2)
+```
+
+Model 3:
+$$log(\frac{\pi_2}{\pi_1}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE) + \beta_{32}contact$$ 
+
+$$log(\frac{\pi_3}{\pi_1}) = \beta_{03} + \beta_{13}I(building=Apartment) + \beta_{23}I(building=HOUSE) + \beta_{33}contact$$
+
+
+```{r}
+#### Nominal logistic regression
+## Reference: sat_low (Low Satisfaction)
+nominal.fit3 <- vglm(cbind(sat_med, sat_high, sat_low) ~ as.factor(building_cat) + contact, family=multinomial, data=d1)
+summary(nominal.fit3)
+AIC(nominal.fit3)
+```
+
+Model 4:
+$$log(\frac{\pi_2}{\pi_1}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE) + \beta_{32}contact + \beta_{42}contact*I(building=Apartment) + \beta_{42}contact*I(building=House)$$ 
+
+$$log(\frac{\pi_3}{\pi_1}) = \beta_{03} + \beta_{13}I(building=Apartment) + \beta_{23}I(building=HOUSE) + \beta_{33}contact + \beta_{43}contact*I(building=Apartment) + \beta_{53}contact*I(building=House)$$
+```{r}
+#### Nominal logistic regression
+## Reference: sat_low (Low Satisfaction)
+nominal.fit4 <- vglm(cbind(sat_med, sat_high, sat_low) ~ contact*as.factor(building_cat), family=multinomial, data=d1)
+summary(nominal.fit4)
+```
+
+```{r}
+AIC(nominal.fit1)
+AIC(nominal.fit2)
+AIC(nominal.fit3)
+AIC(nominal.fit4)
+```
+
+We can see that the best fitting model is model 3.
+Model 3:
+$$log(\frac{\pi_2}{\pi_1}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE) + \beta_{32}contact$$ 
+
+$$log(\frac{\pi_3}{\pi_1}) = \beta_{03} + \beta_{13}I(building=Apartment) + \beta_{23}I(building=HOUSE) + \beta_{33}contact$$
+
+$$log(\frac{\pi_2}{\pi_1}) = 0.1887 + -0.4068I(building=Apartment) + -0.3371I(building=HOUSE) + -0.2960contact$$ 
+
+$$log(\frac{\pi_2}{\pi_1}) = 0.8890 + -0.6416I(building=Apartment) + -0.9456I(building=HOUSE) + -0.3282contact$$
+```{r}
+summary(nominal.fit3)
+```
+
+(b) Do you think an ordinal regression model would be appropriate for associations between
+the level of satisfaction and the other variables? Justify your answer. Fit several ordinal
+models, compare their goodness-of-fit, and then obtain a parsimonious model that summarizes
+the data well. Interpret model parameters of your best model. Compare the results with those
+from (a).
+
+Ordinal regression is appropriate, as we can determine what would be a natural order between the variables.
+
+
+
+
+
+Ordinal Model 1:
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = \beta_{01} + \beta_{11}contact$$
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = \beta_{02} + \beta_{12}contact$$
+```{r}
+library(VGAM)
+
+#### Ordinal logistic regression
+## Reference: sat_low (Low Satisfaction)
+ord.cumul.fit1 <- vglm(cbind(sat_med, sat_high, sat_low) ~ contact, family=cumulative(parallel=F), data=d1)
+summary(ord.cumul.fit1)
+```
+Ordinal Model 2:
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = \beta_{01} + \beta_{11}I(building=Apartment) + \beta_{21}I(building=HOUSE)$$
+
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE)$$
+```{r}
+#### Ordinal logistic regression
+## Reference: sat_low (Low Satisfaction)
+ord.cumul.fit2 <- vglm(cbind(sat_med, sat_high, sat_low) ~ building_cat, family=cumulative(parallel=F), data=d1)
+summary(ord.cumul.fit2)
+```
+Ordinal Model 3:
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = \beta_{01} + \beta_{11}I(building=Apartment) + \beta_{21}I(building=HOUSE)+ \beta_{31}contact$$
+
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE)+ \beta_{32}contact$$
+```{r}
+#### Ordinal logistic regression
+## Reference: sat_low (Low Satisfaction)
+ord.cumul.fit3 <- vglm(cbind(sat_med, sat_high, sat_low) ~ building_cat + contact, family=cumulative(parallel=F), data=d1)
+summary(ord.cumul.fit3)
+```
+
+Ordinal Model 4:
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = \beta_{01} + \beta_{11}I(building=Apartment) + \beta_{21}I(building=HOUSE)+ \beta_{31}contact+ \beta_{41}contact*I(building=Apartment) + \beta_{51}contact*I(building=House)$$
+
+$$log(\frac{\pi_1 + \pi_2}{ \pi_3}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE)+ \beta_{32}contact+ \beta_{42}contact*I(building=Apartment) + \beta_{52}contact*I(building=House)$$
+```{r}
+#### Ordinal logistic regression
+## Reference: sat_low (Low Satisfaction)
+ord.cumul.fit4 <- vglm(cbind(sat_med, sat_high, sat_low) ~ contact*building_cat, family=cumulative(parallel=F), data=d1)
+summary(ord.cumul.fit4)
+```
+
+```{r}
+AIC(ord.cumul.fit1)
+AIC(ord.cumul.fit2)
+AIC(ord.cumul.fit3)
+AIC(ord.cumul.fit4)
+```
+
+Our best model is model 3 with an AIC of 92.18143
+
+Plugging in out parameters: 
+
+
+Ordinal Model 3:
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = \beta_{01} + \beta_{11}I(building=Apartment) + \beta_{21}I(building=HOUSE)+ \beta_{31}contact$$
+
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = \beta_{02} + \beta_{12}I(building=Apartment) + \beta_{22}I(building=HOUSE)+ \beta_{32}contact$$
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = -1.01041  + -0.02583I(building=Apartment) + 0.19269I(building=HOUSE)+ -0.14066contact$$
+
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = 1.28013 + -0.55309I(building=Apartment) + -0.68740I(building=HOUSE)+ -0.30207contact$$
+
+
+
+
+(c) In (a) and (b), select one model fitting the data best. Compare the observed and fitted
+frequencies (or proportions) in the selected model.
+
+
+Lowest AIC from nominal model is 91.51, the best for the ordinal model is 92.18
+This was model 3 in both cases.
+
+Created a table of observed vs fitted values for nominal and ordinal
+mult probab by n 65 + 34 + ...
+
+```{r}
+library(flextable)
+
+
+flextable(data.frame(sat_med, sat_high, sat_low))
+
+total <- sat_low + sat_med + sat_high
+
+# Fitted Nominal Values
+flextable(data.frame(total * fitted(nominal.fit3)))
+
+# Fitted Ordinal Models
+flextable(data.frame(total * fitted(ord.cumul.fit3)))
+
+```
+
+
+In the tables above, we can see the true values followed by first the fitted values from the Nominal Model and then fitted values from the ordinal model. We can see that the models fit the data relatively well.
+<br>
+
+
+2.) (20 points) [Final Exam 2022] Agresti (2002, p.378) described data from a study investigating
+the effects of age and smoking status on breathing test results for workers in certain industrial
+plants in Houston, TX. The table below cross-classifies each worker’s age category, smoking
+status, and breathing test results.
+
+
+Equation (1)
+$$log(\frac{\gamma_j(x_i)}{1-\gamma_j(x_i)}) = \beta_{0j} + \beta_{1}I(S_i=1) + \beta_{2}I(S_i=2) + \beta_{3}I(A_i=1)$$
+
+
+(a) (2 points) Given Equation (1), write down the cumulative logit model.
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = \beta_{01} + \beta_{11}I(S_i=1) + \beta_{21}I(S_i=2) + \beta_{31}I(A_i=1)$$
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = \beta_{02} + \beta_{12}I(S_i=1) + \beta_{22}I(S_i=2) + \beta_{32}I(A_i=1)$$
+
+(b) (4 points) Interpret the proportional odds assumption test results. What is the hypothesis? What is the degrees of freedom for this test? What is the conclusion?
+
+$$H_0: \beta_{11} = \beta_{12} = \beta_1, \beta_{21} = \beta_{22} = \beta_2, \beta_{31} = \beta_{32} = \beta_3$$
+$H_a:$ The equalities do not hold
+
+degrees of freedom: 8-5=3
+We can see from the output with a p-value of 0.137, we fail to reject $H_0$. We do not have evidence that the cumulative odds model is better.
+
+
+(c) (6 points) Given the R output, calculate MLEs for π1, π2, and π3 for a current smoker
+with age <40.
+
+$$log(\frac{\pi_1}{\pi_2 + \pi_3}) = 3.19 - 0.78(0) - 0.96(1) - 0.77(0) = 2.23$$
+
+$$log(\frac{\pi_1 + \pi_2}{\pi_3}) = 4.65 - 0.78(0) - 0.96(1) - 0.77(0) = 3.69$$
+
+$$\frac{\pi_1}{\pi_2 + \pi_3} = exp(2.23) = 9.30$$
+
+$$\frac{\pi_1 + \pi_2}{\pi_3} = exp(3.69) = 40.05$$
+
+$$\pi_1 + \pi_2 + \pi_3 = 1$$
+
+We now have a system of 3 equations and 3 unknowns. Using Wolfram Alpha's equation solver, we obtain the answer 
+$\pi_1 = .903, \pi_2 = .073, \pi_3 = .024$
+
+
+
+(d) (6 points) We want to compare two groups
+Group 1: current smoker, age 40-59
+Group 2: no smoker, age < 40
+Which group does tend to have more “normal” breathing test results? Is this trend
+statistically significant? Answer these by providing a point estimate and 95% confidence
+interval for the following odds ratio:
+γj (current smoker, age 40 − 59)/(1 − γj (current smoker, age 40 − 59))
+γj (no smoker, age < 40)/(1 − γj (no smoker, age < 40))
+
+$$log(\frac{\gamma_j(x_i)}{1-\gamma_j(x_i)}) = \beta_{0j} + \beta_{1}I(S_i=1) + \beta_{2}I(S_i=2) + \beta_{3}I(A_i=1)$$
+
+Group 1: 
+$$log(\frac{\gamma_j(x_i)}{1-\gamma_j(x_i)}) = \beta_{0j} + \beta_{1}I(S_i=1) + \beta_{2}I(S_i=2) + \beta_{3}I(A_i=1) = \beta_{0j} + \beta_{1} + \beta_{3} = 3.19-0.96-0.77$$
+Group 2: 
+$$log(\frac{\gamma_j(x_i)}{1-\gamma_j(x_i)}) = \beta_{0j} + \beta_{1}I(S_i=1) + \beta_{2}I(S_i=2) + \beta_{3}I(A_i=1) = \beta_{0j} = 3.19$$
+
+
+$$OR = \frac{exp(3.19-0.96-0.77)}{exp(3.19)} = exp(-0.96-0.77) = 0.177$$
+
+
+(e) (2 points) The odds ratio that you calculated in (d) do not depend on j. Why? Explain
+fully.
+
+The intercept term cancels out. This is also due to the assumption that we are using a proportional ordinal logistic regression model so the odds ratio will be the same. 
+
+<br>
+
+3. (40 points) The data in Table 9.13 (table9 13.csv in Sakai) are numbers of insurance policies,
+n, and numbers of claims, y, for cars in various insurance categories, CAR, tabulated by age
+of policy holder, AGE, and district where the policy holder lived (DIST = 1, for London
+and other major cities, and DIST = 0, otherwise).
+
+```{r}
+d3 <- read.csv("table9_13.csv")
+#d3
+```
+(a) Fit two logistic regression models including the main effects:
+
+• Model 1: Treat all covariates as categorical variables
+• Model 2: Treat all covariates as continuous variables
+
+Conduct a likelihood-ratio test to compare the two models. Which model does fit the data
+better?
+
+```{r}
+library(lmtest)
+d3 <- read.csv("table9_13.csv")
+
+model1 <- glm(cbind(y, n-y) ~ as.factor(CAR) + as.factor(AGE) + as.factor(DIST), family=binomial(link = "logit"), data=d3)
+model2 <- glm(cbind(y, n-y) ~ CAR + AGE + DIST, family=binomial(link = "logit"), data=d3)
+
+AIC(model1)
+AIC(model2)
+
+lrtest(model1, model2)
+#summary(model1)
+#summary(model2)
+```
+
+We can see that the model with continuous variables is better and has the smaller AIC. Looking at the results from the likelihood ratio test, we can also see that with a p-value of 0.8711, we do not have evidence to reject the null and have no evidence that the model with categorical variables is better.
+
+
+(b) Write down the best model chosen in (a). Interpret the coefficients related to AGE and
+DIST.
+
+$$logit(P) = \beta_0 + \beta_1car + \beta_2age + \beta_3dist$$
+```{r}
+summary(model2)$coef
+```
+
+The coefficient for age is -0.2096666. For every 1 unit increase in age, the log odds of having a claim decreases by 0.2096666.
+The coefficient for DIST is 0.2589127. The log odds of having a claim are 0.2589127 greater in London than otherwise
+
+(c) In Model (b), calculate the odds ratio of having a claim between
+• Pattern 1: Car group 4 and age group 3 and district 1
+• Pattern 2: Car group 4 and age group 1 and district 0
+
+and the associated 95% confidence interval. Interpret the results.
+
+Contrast matrix: $L = [0, 0, 2, 1]$
+
+$$L^T\beta = 2\beta_2 + \beta_3$$
+Calculating the odds ratio and 95% confidence interval:
+
+```{r}
+L <- cbind(c(0, 0, 2, 1))
+Lb <- t(L)%*%model2$coef
+varLb <- t(L)%*%summary(model2)$cov.unscaled%*%L
+
+# 95% CI for true Lb (log odds ratio)
+CILb <- Lb + c(-1,1)*qnorm(1-0.05/2)*sqrt(varLb)
+
+# estimate for true exp(Lb) (odds ratio)
+exp(Lb)
+
+# 95% CI for true exp(Lb) (odds ratio)
+exp(CILb)
+```
+
+We see that the point estimate for the odds ratio is 0.8517856 and the 95% confidence interval is (0.7354338, 0.9865452)
+The odds of having a claim are 0.8517856 (0.7354338, 0.9865452) for pattern 1 than what they are for pattern 2.
+
+(d) Now, fit a Poisson regression model using the same covariate setting chosen in (a). Write
+down the model. Interpret the coefficients related to AGE and DIST.
+
+```{r}
+poisson.fit <- glm(y ~ CAR + AGE + DIST + offset(log(n)), family=poisson(link="log"), data=d3)
+summary(poisson.fit)$coef
+```
+
+
+Age: for every unit increase in age the log risk ratio decreases by a factor of ... 
+
+
+
+(e) Compare model fit of the logistic and Poisson regression models. Can you conduct a
+likelihood-ratio test? Justify your answer.
+
+```{r}
+AIC(model2)
+AIC(poisson.fit)
+```
+
+We cannot do a likelihood-ratio test since our models have 2 different link functions. Looking at the AIC above, we can see that the logistic model has a lower AIC and fits the data better.
+
+
+(f) Plot the observed rate of claims y/n for each of 32 covariate patterns and the fitted rate
+of claims under both logistic and Poisson regression models (Hint: x-axis ranges from 1 to
+32, corresponding to the 32 covariate patterns [i.e., data points], and y-axis ranges from 0 to
+1). What do you observe in the plot?
+
+```{r}
+plot(1:32, d3$y / d3$n)
+# Get the fitted values
+fitted_values_log <- predict(model2, type = "response")
+
+# Add the fitted values to the plot
+points(1:32, predict(poisson.fit, type="response") / d3$n, col = "red", pch = 16)
+points(1:32, fitted_values_log, col = "blue", pch = 16)
+
+# Add labels
+legend("topright", legend = c("Observed Proportions", "Fitted Logistic", "Fitted Poisson"),
+       col = c("black", "blue", "red"), pch = c(1, 16))
+
+# Add title and axis labels
+title(main = "Observed vs. Fitted Proportions")
+xlabel <- "Observation Number"
+ylabel <- "Proportion"
+title(xlab = xlabel, ylab = ylabel)
+
+```
+
+The predictions for logistic regression and poisson are very similar and actually the dots on the graph overlap for many of the predictions. 
+
+(g) In model (d), calculate the relative risk of having a claim between
+• Pattern 1: Car group 4 and age group 3 and district 1
+• Pattern 2: Car group 4 and age group 1 and district 0
+and the associated 95% confidence interval. Interpret the results. Are the results different
+from those in (c)? If so, why?
+
+```{r}
+L <- matrix(c(0, 0, 2, 1), nrow=4,byrow=T)
+lrr <- t(L) %*% as.matrix(poisson.fit$coef)
+rr <- exp(lrr)
+covmat <- summary(poisson.fit)$cov.unscaled
+var.lrr <- t(L)%*%covmat%*%L
+ci.lrr <- c(lrr-(1.96*sqrt(var.lrr)), lrr+(1.96*sqrt(var.lrr)))
+ci.rr <- exp(ci.lrr)
+c(rr, ci.rr)
+```
+
+We see that the odds ratio for having a claim in pattern 1 is 0.8738614 (0.7643789, 0.9990250) of what it is for patterns 2. The odds ratio here is slight greater than it is in part(c), because of our use of the Poisson regression model. The results are very similar and the interpretations are the same.
+
+(h) Now, fit a quasi-Poisson regression model to investigate dispersion. What is your conclusion?
+
+```{r}
+quasi.fit <- glm(y ~ CAR + AGE + DIST + offset(log(n)), family=quasipoisson, data=d3)
+summary(quasi.fit)
+```
+
+We can see that the dispersion parameter is 0.8392002, so the variance is 0.8392002 times the mean in this model.

@@ -1,0 +1,100 @@
+---
+title: "719 hw 5"
+author: "Will Powell"
+date: '2023-09-30'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1.) 
+a.)
+
+Below we can see the fitted logit, probit, and cloglog models as well as a table for each of their predicted outcomes compared with the true values and a table showing metrics including coefficients, SE of coefficients, deviance, and AIC for each model.
+
+```{r}
+# Cancer deaths
+leukemia <- c(13, 5, 5, 3, 4, 18)
+cancers <- c(378, 200, 151, 47, 31, 33)
+
+# Middle dosage radiation dosage
+middle <- c(0, 5, 29.5, 74.5, 149.5, 250)
+
+# Logistic Regression
+model.logit <- glm(cbind(leukemia, cancers) ~ middle, family=binomial(link='logit'))
+
+# Probit Regression
+model.probit <- glm(cbind(leukemia, cancers) ~ middle, family=binomial(link='probit'))
+
+# Cloglog Regression
+model.cloglog <- glm(cbind(leukemia, cancers) ~ middle, family=binomial(link='cloglog'))
+
+summary(model.logit)
+summary(model.probit)
+summary(model.cloglog)
+```
+
+
+```{r}
+library(flextable)
+
+# Predicted values for Logistic Regression
+predicted.logit <- predict(model.logit, type = "response")
+
+# Predicted values for Probit Regression
+predicted.probit <- predict(model.probit, type = "response")
+
+# Predicted values for Cloglog Regression
+predicted.cloglog <- predict(model.cloglog, type = "response")
+
+# Predicted total numbers for the 3 models
+total.logit <- predicted.logit * (leukemia + cancers)
+total.probit <- predicted.probit * (leukemia + cancers)
+total.cloglog <- predicted.cloglog * (leukemia + cancers)
+
+df <- data.frame(leukemia / (leukemia + cancers), leukemia, 
+                 predicted.logit, total.logit,
+                 predicted.probit, total.probit,
+                 predicted.cloglog, total.cloglog)
+
+colnames(df) <- c("Observed proportion of Y", "Observed value of Y",
+                 "Logistic Regression Probabilities", "Logistic Regression Totals", 
+                 "Probit Model Probabilities", "Probit Model Totals", 
+                 "Cloglog Models Probabilities", "Cloglog Model Totals")
+
+flextable(df)
+```
+
+
+
+```{r}
+library(flextable)
+
+# Getting the metrics for probit, logit, and cloglog models
+logit.metrics <- c(model.logit$coefficients[[1]], model.logit$coefficients[[2]], 0.212192, 0.001484, model.logit$deviance, model.logit$aic)
+probit.metrics <- c(model.probit$coefficients[[1]], model.probit$coefficients[[2]], 0.0921728, 0.0008066, model.probit$deviance, model.probit$aic)
+cloglog.metrics <- c(model.cloglog$coefficients[[1]], model.cloglog$coefficients[[2]], 0.207662, 0.001307, model.cloglog$deviance, model.cloglog$aic)
+metric_type <- c("Intercept", "Dosage", "SE of Intercept", "SE of Dosage", "Deciance", "AIC")
+
+# Putting together a dataframe
+df2 <- data.frame(metric_type, logit.metrics, probit.metrics, cloglog.metrics)
+colnames(df2) <- c("Metric type", "Logit", "Probit", "Cloglog")
+flextable(df2)
+```
+
+
+b.)
+
+We can see from the metrics in the above table that the cloglog model fits the data the best, as it has the lowest AIC and best deviance. We can also see it performing well in its predictions as well.
+
+c.)
+
+We can interpret the predictions in the first table as the predicted proportion and predict total number of leukemia deaths for each dosage level at the middle dosage level. 
+
+
+
+

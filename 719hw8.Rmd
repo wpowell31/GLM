@@ -1,0 +1,115 @@
+---
+title: "719 HW 8"
+author: "Will Powell"
+date: '2023-11-09'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+1.)
+
+a.)
+$$E[Y_{ij}] = E[\beta_1 + \beta_2t_{ij} + \beta_{1i} + \beta_{2i}t_{ij} + e_{ij}] = \beta_1 + \beta_2t_{ij}$$
+$$Var(Y_{ij}) = E[(Y_{ij} - E[Y_{ij}])^2] = E[(\beta_{1i} + \beta_{2i}t_{ij} + e_{ij}) ^2]$$
+$$ = E[ \beta_{1i}^2 + (\beta_{2i}t_{ij})^2 + e_{ij}^2 + 2\beta_{1i}e_{ij} + 2\beta_{1i}\beta_{2i}t_{ij} +  2\beta_{2i}t_{ij}e_{ij}]$$
+
+$$= E[ \beta_{1i}^2 + (\beta_{2i}t_{ij})^2 + e_{ij}^2 + 2\beta_{1i}\beta_{2i}t_{ij}]$$
+
+$$ = \sigma_e^2 + t_i^2g_{22} + g_{11} + 2g_{12}t_{ij}$$
+
+
+1b.)
+
+$$Cov(Y_{ij}, Y_{ik}) = E[(Y_{ij} - E[Y_{ij}])(Y_{ik} - E[Y_{ik}])] $$
+$$ = E[(\beta_{1i} + \beta_{2i}t_{ij} + e_{ij})(\beta_{1i} + \beta_{2i}t_{ik} + e_{ik})] $$
+
+$$ = E[\beta_{1i}^2 + \beta_{1i}\beta_{2i}t_{ik} + \beta_{1i}e_{ik} + \beta_{2i}t_{ij}\beta_{1i} + \beta_{2i}^2t_{ij}t_{ik} + \beta_{2i}t_{ij}e_{ik} + e_{ij}\beta_{1i} + e_{ij}\beta_{2i}t_{ik} + e_{ij}e_{ik}] $$
+$$ = E[\beta_{1i}^2] + E[\beta_{2i}^2t_{ij}t_{ik}] + E[\beta_{1i}\beta_{2i}t_{ik}] + E[\beta_{1i}\beta_{2i}t_{ik}] + 0$$
+
+$$ = g_{11} + g_{12}(t_{ij} + t_{ik}) + t_{ij}t_{ik}g_{22}$$
+
+
+1c.)
+$$ Cov(Y_{ij}, Y_{ik}) = g_{11} + g_{12}(t_{ij} + t_{ik}) + t_{ij}t_{ik}g_{22} $$
+$$Corr(Y_{ij}, Y_{ik}) = 0.5 $$
+
+$$Corr(Y_{ij}, Y_{ik}) = \frac{Cov(Y_{ij}, Y_{ik})}{\sqrt{Var_{Y_{ij}}}\sqrt{Var_{Y_{ik}}}$$
+$$Corr(Y_{ij}, Y_{ik}) = \frac{g_{11} + g_{12}(t_{ij} + t_{ik}) + t_{ij}t_{ik}g_{22}}{\sqrt{\sigma_e^2 + t_i^2g_{22} + g_{11} + 2g_{12}t_{ij}} \sqrt{  \sigma_e^2 + t_i^2g_{11} + g_{22} + 2g_{12}t_{ik}} } $$
+$$0.5 = \frac{ 1 + 0.5(0+2) + (0)(2)(1) }{\sqrt{ \sigma_e^2 + 0 + 1 + 0} \sqrt{ \sigma_e^2 + 4 + 1 + 2(0.5)(2)} } $$
+
+$$0.5 = \frac{2}{\sqrt{\sigma_e^2 + 1}\sqrt{\sigma_e^2 + 7}}$$
+$$\sqrt{\sigma_e^2 + 1}\sqrt{\sigma_e^2 + 7} = 4$$
+$$(\sigma_e^2 + 1)(\sigma_e^2 + 7) = 16$$
+$$\sigma_e^4 + 8\sigma_e^2 - 9 =0$$
+$$(\sigma_e^2+9)(\sigma_e^2-1) = 0$$
+$$\sigma_e^2 = -9, \sigma_e^2 = 1$$
+Thus $\sigma_e^2=1$
+
+2a.)
+Model 3:
+$$Y_{ij} = \beta_0 + a_i + (\beta_1 + b_i)t_{ij} + e_{ij}$$  
+
+where $a_i \sim N(0, \sigma_a^2), b_i \sim N(0, \sigma_b^2), e_{ij} \sim N(0, \sigma_e^2) $,  Where $a_i$ and $b_i$ are dependent and $(a_i, b_i)$ and $e_{ij}$ are independent.
+
+We are modeling functional ability scores measuring recovering following a a stroke over time. Our predictor variable is time.
+Since we have have different individuals we are modeling over time, they will have different slopes and intercepts for the regression lines modeling their change. We can see the variances from the output of the R code. For $\beta_0$, the point estimate is 30.9301, and the variance is 405.101. This means that $\beta_0 \sim N(30.9301, 405.101)$. For $\beta_1$, $\beta_1 \sim N(4.7644,  9.239)$. Means for every unit increase in time the FAS will change by 4.7644 (9.239). 
+
+
+2b.)
+
+$$Y_{ij} = \beta_0 + a_i + (\beta_1 + b_i)t_{ij} + \beta_2g_{i} + e_{ij}$$
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(lme4)
+
+setwd("/Users/willpowell/Desktop/Biostat719")
+dt.w <- read.csv("table11_1_modified.csv")
+dt.w <- dt.w %>% 
+  mutate(group = case_when(
+    group == "A" ~ 0,
+    group == "B" ~ 1,
+    group == "C" ~ 2
+  ))
+
+
+# Using pivot_longer to transform the data
+dt.l <- dt.w %>%
+  pivot_longer(cols = starts_with("week"), names_to = "week", values_to = "fas") %>%
+  mutate(
+    time = recode(week,
+      "week1" = 1, "week2" = 2, "week3" = 3, "week4" = 4,
+      "week5" = 5, "week6" = 6, "week7" = 7, "week8" = 8
+    )
+  ) %>%
+  arrange(id) # Ordering by 'id'
+
+#head(dt.l)
+
+fit2b <- lmer(fas ~ time + (1 + time| id) + group, data=dt.l)
+summary(fit2b)
+```
+
+The fixed effect parameters are 23.650 for the intercept. At time 0, on average the average person will has fas score of 23.650. The fixed effect for time is 5.030, for every unit increase in time, fas will increase by 5.030 holding all others constant. For Group, the coefficient is 3.987. For every unit increase in group (A to B, or D to C) the fas score will increase by 3.987. For the variances of the random effects, they are 182.485 for the intercept and 8.273 for time. This is an estimate of the variances of the variances for the slope for time and the intercept between individuals. 
+
+
+2c.)
+
+$$Y_{ij} = \beta_0 + a_i + (\beta_1 + b_i)t_{ij} + \beta_2group_{i} + \beta_3group_i*t_{ij} + e_{ij}$$
+
+```{r}
+fit2c <- lmer(fas ~ time + (1 + time| id) + group + group*time, data=dt.l)
+summary(fit2c)
+```
+
+The fixed effect parameters are 22.7083 for the intercept. At time 0, on average the average person will has fas score of 23.650. The fixed effect for time is 6.7708, for every unit increase in time, fas will increase by 6.7708 holding all others constant. For Group, the coefficient is 4.9286. For every unit increase in group (A to B, or D to C) the fas score will increase by 4.9286. For the variances of the random effects, they are 181.966 for the intercept and 6.475 for time. This is an estimate of the variances of the variances for the slope for time and the intercept between individuals. The variance 
+
+The interaction between group and time coefficient is -1.7411, and with a t-value of -2.608, this yields a p-value less than 0.05. We can say that the temporal effect does vary by groups. 
